@@ -17,7 +17,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ChunkUploadService {
-    private final ChunkMetadataRepository chunkRepo;
+    private final ChunkMetadataRepository chunkMetadataRepository;
     private final FileService fileService;
     private static final String TEMP_DIR = "uploads/tmp";
 
@@ -32,17 +32,16 @@ public class ChunkUploadService {
         Path chunkPath = uploadDir.resolve("chunk_" + chunkNumber);
         file.transferTo(chunkPath);
 
-        chunkRepo.save(ChunkMetadata.builder()
+        ChunkMetadata savedMetaData = chunkMetadataRepository.save(ChunkMetadata.builder()
                 .uploadId(uploadId)
                 .chunkNumber(chunkNumber)
                 .chunkPath(chunkPath.toString())
                 .size(file.getSize())
                 .build());
-
     }
 
     public File mergeChunks(String uploadId, String filename) throws IOException {
-        List<ChunkMetadata> chunks = chunkRepo.findByUploadIdOrderByChunkNumber(uploadId);
+        List<ChunkMetadata> chunks = chunkMetadataRepository.findByUploadIdOrderByChunkNumber(uploadId);
         Path finalFile = Paths.get(TEMP_DIR, filename);
 
         try (OutputStream os = Files.newOutputStream(finalFile)) {

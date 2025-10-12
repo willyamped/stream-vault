@@ -56,11 +56,17 @@ public class ChunkUploadController {
         try {
             File mergedFile = chunkService.mergeChunks(uploadId, fileName);
 
+            String contentType = Files.probeContentType(mergedFile.toPath());
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
             FileEntity savedFile = fileService.saveFile(
                     fileName,
-                    Files.probeContentType(mergedFile.toPath()),
+                    contentType,
                     mergedFile.length(),
-                    Util.computeHash(Files.readAllBytes(mergedFile.toPath()))
+                    Util.computeHash(Files.readAllBytes(mergedFile.toPath())),
+                    mergedFile
             );
 
             return ResponseEntity.ok(new FileUploadResponse(
@@ -74,7 +80,7 @@ public class ChunkUploadController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file " + e.getMessage());
         }
     }
 
