@@ -2,6 +2,7 @@ package com.streamvault.backend.service;
 
 import com.streamvault.backend.model.FileEntity;
 import com.streamvault.backend.repository.FileRepository;
+import com.streamvault.backend.util.Util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +29,7 @@ public class FileService {
     }
 
     public FileEntity saveFileWithHash(MultipartFile file) throws IOException {
-        String hash = computeHash(file.getBytes());
+        String hash = Util.computeHash(file.getBytes());
         if (fileExists(hash)) {
             throw new FileAlreadyExistsException("File already exists");
         }
@@ -38,19 +39,5 @@ public class FileService {
 
     public boolean fileExists(String hash) {
         return fileRepository.findByHash(hash).isPresent();
-    }
-
-    private String computeHash(byte[] content) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(content);
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hashBytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }
