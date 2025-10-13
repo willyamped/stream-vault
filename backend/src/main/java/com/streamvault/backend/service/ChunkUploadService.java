@@ -1,6 +1,7 @@
 package com.streamvault.backend.service;
 
 import com.streamvault.backend.model.ChunkMetadata;
+import com.streamvault.backend.model.FileEntity;
 import com.streamvault.backend.repository.ChunkMetadataRepository;
 import com.streamvault.backend.util.Util;
 import lombok.RequiredArgsConstructor;
@@ -56,5 +57,22 @@ public class ChunkUploadService {
             throw new IllegalStateException("File already exists with hash: " + hash);
         }
         return finalFile.toFile();
+    }
+
+    public FileEntity mergeChunksAndSaveFile(String uploadId, String fileName) throws IOException {
+        File mergedFile = mergeChunks(uploadId, fileName);
+        String contentType = Files.probeContentType(mergedFile.toPath());
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        FileEntity savedFile = fileService.saveFile(
+                fileName,
+                contentType,
+                mergedFile.length(),
+                Util.computeHash(Files.readAllBytes(mergedFile.toPath())),
+                mergedFile
+        );
+        return savedFile;
     }
 }

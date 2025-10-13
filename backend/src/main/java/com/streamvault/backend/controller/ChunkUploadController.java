@@ -49,25 +49,12 @@ public class ChunkUploadController {
     }
 
     @PostMapping("/complete")
-    public ResponseEntity<?> completeUpload(
+    public ResponseEntity<FileUploadResponse> completeUpload(
             @RequestParam("uploadId") String uploadId,
             @RequestParam("fileName") String fileName) {
 
         try {
-            File mergedFile = chunkService.mergeChunks(uploadId, fileName);
-
-            String contentType = Files.probeContentType(mergedFile.toPath());
-            if (contentType == null) {
-                contentType = "application/octet-stream";
-            }
-
-            FileEntity savedFile = fileService.saveFile(
-                    fileName,
-                    contentType,
-                    mergedFile.length(),
-                    Util.computeHash(Files.readAllBytes(mergedFile.toPath())),
-                    mergedFile
-            );
+            FileEntity savedFile = chunkService.mergeChunksAndSaveFile(uploadId, fileName);
 
             return ResponseEntity.ok(new FileUploadResponse(
                     savedFile.getId(),
@@ -78,9 +65,23 @@ public class ChunkUploadController {
                     "File uploaded and saved successfully"
             ));
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FileUploadResponse(
+                    null,
+                    null,
+                    null,
+                    0,
+                    null,
+                    e.getMessage()
+            ));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new FileUploadResponse(
+                    null,
+                    null,
+                    null,
+                    0,
+                    null,
+                    e.getMessage()
+            ));
         }
     }
 
