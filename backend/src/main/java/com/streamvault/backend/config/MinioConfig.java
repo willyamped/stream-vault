@@ -35,7 +35,7 @@ public class MinioConfig {
             );
             if (!found) {
                 client.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
-                System.out.println("✅ Created bucket: " + bucket);
+                System.out.println("✅ Created MinIO bucket: " + bucket);
             }
             return client;
         } catch (Exception e) {
