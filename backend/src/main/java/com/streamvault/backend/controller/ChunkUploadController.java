@@ -44,7 +44,12 @@ public class ChunkUploadController {
                 return ResponseEntity.badRequest().body("Invalid chunk number");
             }
 
-            chunkService.saveChunk(uploadId, chunkNumber, file);
+            boolean uploaded = chunkService.saveChunk(uploadId, chunkNumber, file);
+            if (!uploaded) {
+                log.info("[POST /api/upload/chunk] Chunk {} already exists for uploadId={}", chunkNumber, uploadId);
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Chunk " + chunkNumber + " already uploaded");
+            }
             log.info("[POST /api/upload/chunk] Successfully uploaded chunk={} for uploadId={}", chunkNumber, uploadId);
 
             return ResponseEntity.ok("Chunk " + chunkNumber + " uploaded");

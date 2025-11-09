@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -65,18 +66,20 @@ public class FileController {
 
         try {
             UploadStatus status = chunkUploadService.getUploadStatus(uploadId);
+            List<Integer> uploadedChunks = chunkUploadService.getUploadedChunks(uploadId);
             log.info("[GET /api/files/status] Retrieved status for uploadId={}: {}", uploadId, status.getStatus());
             return ResponseEntity.ok(
                     new UploadStatusResponse(
                             uploadId,
                             status.getStatus(),
-                            status.getFileName()
+                            status.getFileName(),
+                            uploadedChunks
                     )
             );
         } catch (Exception e) {
             log.error("[GET /api/files/status] Failed to retrieve upload status for uploadId={}: {}", uploadId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new UploadStatusResponse(uploadId, null, null));
+                    .body(new UploadStatusResponse(uploadId, null, null, null));
         }
     }
 }

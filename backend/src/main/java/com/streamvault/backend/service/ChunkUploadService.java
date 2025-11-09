@@ -49,8 +49,11 @@ public class ChunkUploadService {
         return uploadId;
     }
 
-    public void saveChunk(String uploadId, int chunkNumber, MultipartFile file) {
+    public boolean saveChunk(String uploadId, int chunkNumber, MultipartFile file) {
         String objectName = uploadId + "/chunk_" + chunkNumber;
+        if (redisTemplate.opsForHash().hasKey(objectName, String.valueOf(chunkNumber))) {
+            return false;
+        }
 
         try {
             minioClient.putObject(
@@ -65,6 +68,7 @@ public class ChunkUploadService {
             String key = CHUNK_KEY_PREFIX + uploadId;
             redisTemplate.opsForHash()
                     .put(key, String.valueOf(chunkNumber), objectName);
+            return true;
 
         } catch (Exception e) {
             throw new RuntimeException(
@@ -158,5 +162,14 @@ public class ChunkUploadService {
     public UploadStatus getUploadStatus(String uploadId) {
         return uploadStatusRepository.findByUploadId(uploadId)
                 .orElseThrow(() -> new IllegalStateException("Invalid uploadId"));
+    }
+
+    public List<Integer> getUploadedChunks(String uploadId) {
+    String key = CHUNK_KEY_PREFIX + uploadId;
+    return redisTemplate.<String, String>opsForHash()
+            .keys(key).stream()
+            .map(Integer::valueOf)
+            .sorted()
+            .collect(Collectors.toList());
     }
 }
