@@ -20,7 +20,10 @@ public class MinioConfig {
     private String secretKey;
 
     @Value("${minio.bucket}")
-    private String bucket;
+    private String fileBucket;
+
+    @Value("${minio.chunk-bucket}")
+    private String chunkBucket;
 
     @Bean
     public MinioClient minioClient() {
@@ -30,16 +33,23 @@ public class MinioConfig {
                     .credentials(accessKey, secretKey)
                     .build();
 
-            boolean found = client.bucketExists(
-                    BucketExistsArgs.builder().bucket(bucket).build()
-            );
-            if (!found) {
-                client.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
-                System.out.println("✅ Created MinIO bucket: " + bucket);
-            }
+            createBucketIfNotExists(client, fileBucket);
+            createBucketIfNotExists(client, chunkBucket);
+
             return client;
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize MinIO", e);
+        }
+    }
+
+    private void createBucketIfNotExists(MinioClient client, String bucketName) throws Exception {
+        boolean exists = client.bucketExists(
+                BucketExistsArgs.builder().bucket(bucketName).build()
+        );
+
+        if (!exists) {
+            client.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+            System.out.println("✅ Created MinIO bucket: " + bucketName);
         }
     }
 }

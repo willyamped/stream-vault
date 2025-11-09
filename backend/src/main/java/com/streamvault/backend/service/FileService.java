@@ -22,13 +22,13 @@ public class FileService {
 
     private final FileRepository fileRepository;
     private final MinioClient minioClient;
-    private static final String BUCKET = "bucket";
+    private static final String FILE_BUCKET = "files";
 
     public FileEntity saveFile(String fileName, String fileType, Long size, String hash, File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
             minioClient.putObject(
                     PutObjectArgs.builder()
-                            .bucket(BUCKET)
+                            .bucket(FILE_BUCKET)
                             .object(fileName)
                             .stream(fis, file.length(), -1)
                             .contentType(fileType)
