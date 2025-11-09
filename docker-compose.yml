@@ -1,39 +1,50 @@
 version: "3.9"
 services:
 
+  # PostgreSQL
   postgres:
     image: postgres:15
     environment:
       POSTGRES_DB: streamvault
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+      TZ: Asia/Singapore
     ports:
       - "5432:5432"
 
+  # Redis
   redis:
     image: redis:7-alpine
+    environment:
+      TZ: Asia/Singapore
     ports:
       - "6379:6379"
 
+  # MinIO
   minio:
     image: minio/minio
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       MINIO_BROWSER: "on"
+      TZ: Asia/Singapore
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
       - "9001:9001"
 
+  # Zookeeper
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.1
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      TZ: Asia/Singapore
+      JVMFLAGS: "-Duser.timezone=Asia/Singapore"
     ports:
       - "2181:2181"
 
+  # Kafka
   kafka:
     image: confluentinc/cp-kafka:7.4.1
     depends_on:
@@ -41,16 +52,19 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_MIN_INSYNC_REPLICAS: 1
-      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      TZ: Asia/Singapore
+      KAFKA_OPTS: "-Duser.timezone=Asia/Singapore"
     ports:
       - "9092:9092"
 
+  # Backend (Spring Boot)
   backend:
     build:
       context: ./backend
@@ -73,6 +87,9 @@ services:
       # Kafka
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
+      # Timezone
+      TZ: Asia/Singapore
+      JAVA_OPTS: "-Duser.timezone=Asia/Singapore"
     depends_on:
       - postgres
       - redis
