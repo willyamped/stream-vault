@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.*;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ public class ChunkUploadService {
 
     private static final String CHUNK_BUCKET = "upload-chunks";
     private static final String CHUNK_KEY_PREFIX = "upload:";
+    private static final Duration UPLOAD_TTL = Duration.ofHours(24);
 
     public String initialiseUpload() {
         String uploadId = UUID.randomUUID().toString();
@@ -50,8 +52,11 @@ public class ChunkUploadService {
     }
 
     public boolean saveChunk(String uploadId, int chunkNumber, MultipartFile file) {
+        String key = CHUNK_KEY_PREFIX + uploadId;
+        String redisField = String.valueOf(chunkNumber);
         String objectName = uploadId + "/chunk_" + chunkNumber;
-        if (redisTemplate.opsForHash().hasKey(objectName, String.valueOf(chunkNumber))) {
+        
+        if (redisTemplate.opsForHash().hasKey(key, redisField)) {
             return false;
         }
 
@@ -65,9 +70,12 @@ public class ChunkUploadService {
                     .build()
             );
 
-            String key = CHUNK_KEY_PREFIX + uploadId;
             redisTemplate.opsForHash()
-                    .put(key, String.valueOf(chunkNumber), objectName);
+                    .put(key, redisField, objectName);
+
+            if (redisTemplate.getExpire(key) == -1) {
+                redisTemplate.expire(key, UPLOAD_TTL);
+            }
             return true;
 
         } catch (Exception e) {
