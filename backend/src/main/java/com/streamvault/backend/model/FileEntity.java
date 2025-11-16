@@ -26,8 +26,16 @@ public class FileEntity {
     private String hash;
 
     private String minioPath;
-    
+
     private String bucket;
 
     private LocalDateTime uploadedAt;
+
+    @Enumerated(EnumType.STRING)
+    private FileCategory category;
+
+    public enum FileCategory {
+        FILE,
+        VIDEO
+    }
 }

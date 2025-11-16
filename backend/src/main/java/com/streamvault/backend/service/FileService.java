@@ -3,15 +3,21 @@ package com.streamvault.backend.service;
 import com.streamvault.backend.model.FileEntity;
 import com.streamvault.backend.repository.FileRepository;
 import com.streamvault.backend.util.Util;
+
+import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
@@ -24,6 +30,10 @@ public class FileService {
     private final FileRepository fileRepository;
     private final MinioClient minioClient;
     private static final String FILE_BUCKET = "files";
+
+    public FileEntity save(FileEntity file) {
+        return fileRepository.save(file);
+    }
 
     public FileEntity saveFile(String fileName, String fileType, Long size, String hash, File file) throws IOException {
         String objectName = UUID.randomUUID() + "_" + fileName;
@@ -75,5 +85,46 @@ public class FileService {
 
     public boolean fileExists(String hash) {
         return fileRepository.findByHash(hash).isPresent();
+    }
+
+    public ResponseEntity<byte[]> streamFile(FileEntity file, String rangeHeader) throws Exception {
+        String bucket = file.getBucket();
+        String objectName = file.getMinioPath();
+        long fileSize = file.getSize();
+
+        long start = 0;
+        long end = fileSize - 1;
+
+        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+            String[] parts = rangeHeader.replace("bytes=", "").split("-");
+            start = Long.parseLong(parts[0]);
+
+            if (parts.length > 1 && !parts[1].isEmpty()) {
+                end = Long.parseLong(parts[1]);
+            }
+        }
+
+        long contentLength = end - start + 1;
+
+        try (InputStream is = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(objectName)
+                        .offset(start)
+                        .length(contentLength)
+                        .build()
+        )) {
+            byte[] data = is.readAllBytes();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Type", file.getFileType());
+            headers.add("Accept-Ranges", "bytes");
+            headers.add("Content-Length", String.valueOf(data.length));
+            headers.add("Content-Range", "bytes " + start + "-" + end + "/" + fileSize);
+
+            return ResponseEntity.status(rangeHeader == null ? 200 : 206)
+                .headers(headers)
+                .body(data);
+        }
     }
 }
