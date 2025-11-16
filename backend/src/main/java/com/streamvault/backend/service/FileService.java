@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,11 +26,12 @@ public class FileService {
     private static final String FILE_BUCKET = "files";
 
     public FileEntity saveFile(String fileName, String fileType, Long size, String hash, File file) throws IOException {
+        String objectName = UUID.randomUUID() + "_" + fileName;
         try (FileInputStream fis = new FileInputStream(file)) {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(FILE_BUCKET)
-                            .object(fileName)
+                            .object(objectName)
                             .stream(fis, file.length(), -1)
                             .contentType(fileType)
                             .build()
@@ -43,6 +45,8 @@ public class FileService {
                 .fileType(fileType)
                 .size(size)
                 .hash(hash)
+                .minioPath(objectName)
+                .bucket(FILE_BUCKET)
                 .uploadedAt(LocalDateTime.now())
                 .build());
     }

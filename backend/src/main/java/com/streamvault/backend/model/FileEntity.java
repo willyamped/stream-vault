@@ -23,7 +23,11 @@ public class FileEntity {
 
     private Long size;
 
-    private String hash; // for deduplication
+    private String hash;
+
+    private String minioPath;
+    
+    private String bucket;
 
     private LocalDateTime uploadedAt;
 }
