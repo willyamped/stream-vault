@@ -37,7 +37,7 @@ public class VideoService {
                 .orElseThrow(() -> new IllegalStateException("Video not found"));
     }
 
-    public VideoEntity updateVideoMetadata(VideoProcessedRequest req) {
+    public void updateVideoMetadata(VideoProcessedRequest req) {
         VideoEntity video = getVideo(req.getVideoId());
 
         video.setDurationSeconds(req.getDurationSeconds());
@@ -46,6 +46,6 @@ public class VideoService {
         video.setThumbnailPath(req.getThumbnailPath());
         video.setReadyForStreaming(true);
 
-        return videoRepository.save(video);
+        videoRepository.save(video);
     }
 }
