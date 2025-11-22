@@ -1,5 +1,6 @@
 package com.streamvault.backend.service;
 
+import com.streamvault.backend.dto.StreamedFile;
 import com.streamvault.backend.model.FileEntity;
 import com.streamvault.backend.repository.FileRepository;
 import com.streamvault.backend.util.Util;
@@ -87,7 +88,7 @@ public class FileService {
         return fileRepository.findByHash(hash).isPresent();
     }
 
-    public ResponseEntity<byte[]> streamFile(FileEntity file, String rangeHeader) throws Exception {
+    public StreamedFile streamFile(FileEntity file, String rangeHeader) throws Exception {
         String bucket = file.getBucket();
         String objectName = file.getMinioPath();
         long fileSize = file.getSize();
@@ -116,15 +117,14 @@ public class FileService {
         )) {
             byte[] data = is.readAllBytes();
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.add("Content-Type", file.getFileType());
-            headers.add("Accept-Ranges", "bytes");
-            headers.add("Content-Length", String.valueOf(data.length));
-            headers.add("Content-Range", "bytes " + start + "-" + end + "/" + fileSize);
-
-            return ResponseEntity.status(rangeHeader == null ? 200 : 206)
-                .headers(headers)
-                .body(data);
+            return new StreamedFile(
+                    data,
+                    start,
+                    end,
+                    fileSize,
+                    file.getFileType(),
+                    rangeHeader != null // partial?
+            );
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.streamvault.backend.controller;
 
+import com.streamvault.backend.dto.StreamedFile;
 import com.streamvault.backend.dto.VideoProcessedRequest;
 import com.streamvault.backend.dto.VideoResponse;
 import com.streamvault.backend.model.FileEntity;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,12 +64,32 @@ public class VideoController {
     }
 
     @GetMapping("/stream/{id}")
-    public ResponseEntity<byte[]> streamVideo(@PathVariable Long id, @RequestHeader(value = "Range", required = false) String rangeHeader) {
-        VideoEntity video = videoService.getVideo(id);
-        FileEntity file = video.getFile();
-
+    public ResponseEntity<byte[]> streamVideo(
+            @PathVariable Long id,
+            @RequestHeader(value = "Range", required = false) String rangeHeader
+    ) {
         try {
-            return fileService.streamFile(file, rangeHeader);
+            VideoEntity video = videoService.getVideo(id);
+            FileEntity file = video.getFile();
+
+            StreamedFile streamed = fileService.streamFile(file, rangeHeader);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Type", streamed.contentType());
+            headers.add("Accept-Ranges", "bytes");
+            headers.add("Content-Length", String.valueOf(streamed.data().length));
+            headers.add(
+                "Content-Range",
+                "bytes %d-%d/%d".formatted(
+                    streamed.start(), streamed.end(), streamed.totalSize()
+                )
+            );
+
+            return ResponseEntity
+                    .status(streamed.partial() ? 206 : 200)
+                    .headers(headers)
+                    .body(streamed.data());
+
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }

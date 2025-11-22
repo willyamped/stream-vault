@@ -1,5 +1,6 @@
 package com.streamvault.backend.controller;
 
+import com.streamvault.backend.dto.StreamedFile;
 import com.streamvault.backend.dto.VideoProcessedRequest;
 import com.streamvault.backend.model.FileEntity;
 import com.streamvault.backend.model.VideoEntity;
@@ -107,24 +108,39 @@ class VideoControllerTest {
     }
 
     @Test
-    @DisplayName("streamVideo returns binary content from fileService")
+    @DisplayName("streamVideo returns binary content with correct headers for range request")
     void testStreamVideo() throws Exception {
         Long id = 4L;
         String range = "bytes=0-";
 
         VideoEntity videoEntity = new VideoEntity();
         FileEntity file = new FileEntity();
+        file.setFileType("video/mp4");
         videoEntity.setFile(file);
 
-        when(videoService.getVideo(id)).thenReturn(videoEntity);
-        when(fileService.streamFile(file, range)).thenReturn(
-                org.springframework.http.ResponseEntity.ok(new byte[]{1,2,3})
+        byte[] expectedBytes = new byte[]{1, 2, 3};
+
+        StreamedFile streamed = new StreamedFile(
+                expectedBytes,
+                0,
+                2,
+                3,
+                "video/mp4",
+                true
         );
 
-        mockMvc.perform(get("/api/videos/stream/4").header("Range", range))
-                .andExpect(status().isOk());
-    }
+        when(videoService.getVideo(id)).thenReturn(videoEntity);
+        when(fileService.streamFile(file, range)).thenReturn(streamed);
 
+        mockMvc.perform(get("/api/videos/stream/4").header("Range", range))
+                .andExpect(status().isPartialContent()) // 206
+                .andExpect(header().string("Content-Type", "video/mp4"))
+                .andExpect(header().string("Accept-Ranges", "bytes"))
+                .andExpect(header().string("Content-Length", "3"))
+                .andExpect(header().string("Content-Range", "bytes 0-2/3"))
+                .andExpect(content().bytes(expectedBytes));
+    }
+    
     @Test
     @DisplayName("streamVideo returns 500 on exception from fileService")
     void testStreamVideoException() throws Exception {

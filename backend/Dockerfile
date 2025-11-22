@@ -10,6 +10,9 @@ RUN mvn dependency:go-offline
 # Copy the rest of the source code
 COPY src ./src
 
+# Run tests during build
+RUN mvn test
+
 # Build the application
 RUN mvn clean package -DskipTests
 
