@@ -4,6 +4,8 @@ import com.streamvault.backend.model.FileEntity;
 import com.streamvault.backend.model.VideoEntity;
 import com.streamvault.backend.dto.VideoProcessedRequest;
 import com.streamvault.backend.repository.VideoRepository;
+import com.streamvault.backend.search.VideoIndexService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 public class VideoService {
 
     private final VideoRepository videoRepository;
+    private final VideoIndexService videoIndexService;
 
     public VideoEntity createPendingVideo(FileEntity file) {
         return videoRepository.save(
@@ -47,5 +50,18 @@ public class VideoService {
         video.setReadyForStreaming(true);
 
         videoRepository.save(video);
+    }
+
+    public VideoEntity updateVideoTitleDescription(Long id, String title, String description) {
+        VideoEntity video = videoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Video not found: " + id));
+        video.setTitle(title);
+        video.setDescription(description);
+        videoIndexService.indexVideo(video);
+        return videoRepository.save(video);
+    }
+
+    public Page<VideoEntity> searchVideos(String query, Pageable pageable) {
+        return videoIndexService.searchVideos(query, pageable);
     }
 }

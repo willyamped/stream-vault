@@ -24,4 +24,5 @@ COPY --from=build /app/target/*.jar app.jar
 RUN apk add --no-cache ffmpeg
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Wait for Elasticsearch to be ready
+ENTRYPOINT ["sh", "-c", "echo 'Delaying startup...'; sleep 7; java -jar app.jar"]

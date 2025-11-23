@@ -66,8 +66,7 @@ public class VideoController {
     @GetMapping("/stream/{id}")
     public ResponseEntity<byte[]> streamVideo(
             @PathVariable Long id,
-            @RequestHeader(value = "Range", required = false) String rangeHeader
-    ) {
+            @RequestHeader(value = "Range", required = false) String rangeHeader) {
         try {
             VideoEntity video = videoService.getVideo(id);
             FileEntity file = video.getFile();
@@ -93,5 +92,27 @@ public class VideoController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<VideoResponse> updateVideo(
+            @PathVariable Long id,
+            @RequestBody VideoResponse updateRequest) {
+
+        VideoEntity updated = videoService.updateVideoTitleDescription(id, updateRequest.getTitle(), updateRequest.getDescription());
+        return ResponseEntity.ok(toResponse(updated));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<VideoResponse>> searchVideos(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        PageRequest pageable = PageRequest.of(page, size);
+
+        Page<VideoEntity> results = videoService.searchVideos(query, pageable);
+
+        return ResponseEntity.ok(results.map(this::toResponse));
     }
 }
