@@ -4,6 +4,7 @@ import com.streamvault.backend.model.VideoEntity;
 import com.streamvault.backend.repository.VideoRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VideoIndexService {
@@ -53,9 +55,11 @@ public class VideoIndexService {
                     .filter(v -> v != null)
                     .toList();
 
+            log.info("Elasticsearch returned {} results", videos.size());
             return new PageImpl<>(videos, pageable, esResults.getTotalElements());
 
         } catch (RuntimeException ex) {
+            log.warn("Elasticsearch failed, falling back to database search", ex.getMessage());
             return videoRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query, pageable);
         }
     }

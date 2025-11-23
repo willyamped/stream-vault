@@ -100,3 +100,11 @@ Default credentials:
 ```
 minioadmin / minioadmin
 ```
+
+## Kibana UI
+
+Access Kibana dashboard:
+
+```
+http://localhost:5601 > Discovery
+```
